@@ -1,6 +1,6 @@
 
 import React, { useState } from "react";
-import { Folder, Key, Lock, Edit, Trash, Plus, Import, Export } from "lucide-react";
+import { Folder, Key, Lock, Edit, Trash, Plus, Import, ArrowUpFromLine } from "lucide-react";
 import { Button } from "./ui/button";
 
 interface PasswordEntry {
@@ -72,7 +72,7 @@ const PasswordManager = () => {
               Import
             </Button>
             <Button size="sm" variant="outline" className="w-full">
-              <Export className="h-4 w-4 mr-2" />
+              <ArrowUpFromLine className="h-4 w-4 mr-2" />
               Export
             </Button>
           </div>
