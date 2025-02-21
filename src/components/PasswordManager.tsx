@@ -2,6 +2,8 @@
 import React, { useState } from "react";
 import { Folder, Key, Lock, Edit, Trash, Plus, Import, ArrowUpFromLine } from "lucide-react";
 import { Button } from "./ui/button";
+import { CreatePasswordModal } from "./CreatePasswordModal";
+import { useToast } from "./ui/use-toast";
 
 interface PasswordEntry {
   id: string;
@@ -29,10 +31,27 @@ const PasswordManager = () => {
       url: "https://app.ccloud.com",
       modified: "6/13/2019, 9:44:00 AM",
     },
-    // Add more sample entries as needed
   ]);
 
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [selectedFolder, setSelectedFolder] = useState("Example Safe");
+  const { toast } = useToast();
+
+  const handleCreatePassword = (data: { title: string; login: string; password: string; url: string }) => {
+    const newPassword: PasswordEntry = {
+      id: Date.now().toString(),
+      ...data,
+      modified: new Date().toLocaleString(),
+    };
+
+    setPasswords([...passwords, newPassword]);
+    setIsCreateModalOpen(false);
+    
+    toast({
+      title: "Senha adicionada",
+      description: "A nova senha foi salva com sucesso!",
+    });
+  };
 
   return (
     <div className="min-h-screen bg-white">
@@ -81,7 +100,10 @@ const PasswordManager = () => {
         {/* Main content */}
         <div className="flex-1 p-4">
           <div className="mb-4">
-            <Button className="bg-green-500 hover:bg-green-600">
+            <Button 
+              className="bg-green-500 hover:bg-green-600"
+              onClick={() => setIsCreateModalOpen(true)}
+            >
               <Plus className="h-4 w-4 mr-2" />
               New Password Safe
             </Button>
@@ -117,7 +139,12 @@ const PasswordManager = () => {
                         {entry.title}
                       </div>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap">{entry.password}</td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div>
+                        <div>{entry.login}</div>
+                        <div>{entry.password}</div>
+                      </div>
+                    </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <a href={entry.url} className="text-blue-600 hover:text-blue-800">
                         {entry.url}
@@ -141,6 +168,12 @@ const PasswordManager = () => {
           </div>
         </div>
       </div>
+
+      <CreatePasswordModal
+        isOpen={isCreateModalOpen}
+        onClose={() => setIsCreateModalOpen(false)}
+        onSave={handleCreatePassword}
+      />
     </div>
   );
 };
