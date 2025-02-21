@@ -1,5 +1,5 @@
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Folder, Key, Lock, Edit, Trash, Plus, Import, ArrowUpFromLine } from "lucide-react";
 import { Button } from "./ui/button";
 import { CreatePasswordModal } from "./CreatePasswordModal";
@@ -21,21 +21,32 @@ interface Folder {
   items: (Folder | PasswordEntry)[];
 }
 
+const STORAGE_KEY = 'password-manager-data';
+
 const PasswordManager = () => {
-  const [passwords, setPasswords] = useState<PasswordEntry[]>([
-    {
-      id: "1",
-      title: "ccloud.com",
-      login: "user@email.com",
-      password: "********",
-      url: "https://app.ccloud.com",
-      modified: "6/13/2019, 9:44:00 AM",
-    },
-  ]);
+  const [passwords, setPasswords] = useState<PasswordEntry[]>(() => {
+    // Inicializa o estado com os dados do localStorage ou com o valor padrão
+    const savedPasswords = localStorage.getItem(STORAGE_KEY);
+    return savedPasswords ? JSON.parse(savedPasswords) : [
+      {
+        id: "1",
+        title: "ccloud.com",
+        login: "user@email.com",
+        password: "********",
+        url: "https://app.ccloud.com",
+        modified: "6/13/2019, 9:44:00 AM",
+      },
+    ];
+  });
 
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [selectedFolder, setSelectedFolder] = useState("Example Safe");
   const { toast } = useToast();
+
+  // Salva no localStorage sempre que passwords mudar
+  useEffect(() => {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(passwords));
+  }, [passwords]);
 
   const handleCreatePassword = (data: { title: string; login: string; password: string; url: string }) => {
     const newPassword: PasswordEntry = {
