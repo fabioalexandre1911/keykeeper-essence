@@ -1,5 +1,5 @@
 
-import React from "react";
+import React, { useEffect } from "react";
 import { Button } from "./ui/button";
 import {
   Dialog,
@@ -16,9 +16,15 @@ interface CreatePasswordModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSave: (data: { title: string; login: string; password: string; url: string }) => void;
+  initialData?: {
+    title: string;
+    login: string;
+    password: string;
+    url: string;
+  } | null;
 }
 
-export function CreatePasswordModal({ isOpen, onClose, onSave }: CreatePasswordModalProps) {
+export function CreatePasswordModal({ isOpen, onClose, onSave, initialData }: CreatePasswordModalProps) {
   const [formData, setFormData] = React.useState({
     title: "",
     login: "",
@@ -26,19 +32,31 @@ export function CreatePasswordModal({ isOpen, onClose, onSave }: CreatePasswordM
     url: "",
   });
 
+  useEffect(() => {
+    if (initialData) {
+      setFormData(initialData);
+    } else {
+      setFormData({
+        title: "",
+        login: "",
+        password: "",
+        url: "",
+      });
+    }
+  }, [initialData]);
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     onSave(formData);
-    setFormData({ title: "", login: "", password: "", url: "" });
   };
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
-          <DialogTitle>Adicionar Nova Senha</DialogTitle>
+          <DialogTitle>{initialData ? "Editar Senha" : "Adicionar Nova Senha"}</DialogTitle>
           <DialogDescription>
-            Preencha os detalhes da nova senha que você deseja salvar.
+            {initialData ? "Atualize os detalhes da senha." : "Preencha os detalhes da nova senha que você deseja salvar."}
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit}>
@@ -97,7 +115,7 @@ export function CreatePasswordModal({ isOpen, onClose, onSave }: CreatePasswordM
             <Button type="button" variant="outline" onClick={onClose}>
               Cancelar
             </Button>
-            <Button type="submit">Salvar</Button>
+            <Button type="submit">{initialData ? "Atualizar" : "Salvar"}</Button>
           </DialogFooter>
         </form>
       </DialogContent>

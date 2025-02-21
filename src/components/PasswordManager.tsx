@@ -25,7 +25,6 @@ const STORAGE_KEY = 'password-manager-data';
 
 const PasswordManager = () => {
   const [passwords, setPasswords] = useState<PasswordEntry[]>(() => {
-    // Inicializa o estado com os dados do localStorage ou com o valor padrão
     const savedPasswords = localStorage.getItem(STORAGE_KEY);
     return savedPasswords ? JSON.parse(savedPasswords) : [
       {
@@ -41,26 +40,53 @@ const PasswordManager = () => {
 
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [selectedFolder, setSelectedFolder] = useState("Example Safe");
+  const [editingPassword, setEditingPassword] = useState<PasswordEntry | null>(null);
   const { toast } = useToast();
 
-  // Salva no localStorage sempre que passwords mudar
   useEffect(() => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(passwords));
   }, [passwords]);
 
   const handleCreatePassword = (data: { title: string; login: string; password: string; url: string }) => {
-    const newPassword: PasswordEntry = {
-      id: Date.now().toString(),
-      ...data,
-      modified: new Date().toLocaleString(),
-    };
-
-    setPasswords([...passwords, newPassword]);
+    if (editingPassword) {
+      // Modo edição
+      const updatedPasswords = passwords.map(p => 
+        p.id === editingPassword.id 
+          ? { ...p, ...data, modified: new Date().toLocaleString() }
+          : p
+      );
+      setPasswords(updatedPasswords);
+      setEditingPassword(null);
+      toast({
+        title: "Senha atualizada",
+        description: "A senha foi atualizada com sucesso!",
+      });
+    } else {
+      // Modo criação
+      const newPassword: PasswordEntry = {
+        id: Date.now().toString(),
+        ...data,
+        modified: new Date().toLocaleString(),
+      };
+      setPasswords([...passwords, newPassword]);
+      toast({
+        title: "Senha adicionada",
+        description: "A nova senha foi salva com sucesso!",
+      });
+    }
     setIsCreateModalOpen(false);
-    
+  };
+
+  const handleEdit = (password: PasswordEntry) => {
+    setEditingPassword(password);
+    setIsCreateModalOpen(true);
+  };
+
+  const handleDelete = (id: string) => {
+    setPasswords(passwords.filter(p => p.id !== id));
     toast({
-      title: "Senha adicionada",
-      description: "A nova senha foi salva com sucesso!",
+      title: "Senha excluída",
+      description: "A senha foi excluída com sucesso!",
     });
   };
 
@@ -113,7 +139,10 @@ const PasswordManager = () => {
           <div className="mb-4">
             <Button 
               className="bg-green-500 hover:bg-green-600"
-              onClick={() => setIsCreateModalOpen(true)}
+              onClick={() => {
+                setEditingPassword(null);
+                setIsCreateModalOpen(true);
+              }}
             >
               <Plus className="h-4 w-4 mr-2" />
               New Password Safe
@@ -165,10 +194,15 @@ const PasswordManager = () => {
                       {entry.modified}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                      <Button variant="ghost" size="sm" className="mr-2">
+                      <Button variant="ghost" size="sm" className="mr-2" onClick={() => handleEdit(entry)}>
                         <Edit className="h-4 w-4" />
                       </Button>
-                      <Button variant="ghost" size="sm" className="text-red-600 hover:text-red-800">
+                      <Button 
+                        variant="ghost" 
+                        size="sm" 
+                        className="text-red-600 hover:text-red-800"
+                        onClick={() => handleDelete(entry.id)}
+                      >
                         <Trash className="h-4 w-4" />
                       </Button>
                     </td>
@@ -182,8 +216,12 @@ const PasswordManager = () => {
 
       <CreatePasswordModal
         isOpen={isCreateModalOpen}
-        onClose={() => setIsCreateModalOpen(false)}
+        onClose={() => {
+          setIsCreateModalOpen(false);
+          setEditingPassword(null);
+        }}
         onSave={handleCreatePassword}
+        initialData={editingPassword}
       />
     </div>
   );
