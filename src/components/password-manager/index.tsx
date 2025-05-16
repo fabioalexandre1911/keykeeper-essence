@@ -25,6 +25,8 @@ const PasswordManager = () => {
     handleDelete,
     handleLogout,
     toggleSidebar,
+    handleExport,
+    handleImport,
   } = usePasswordManager();
 
   return (
@@ -40,6 +42,8 @@ const PasswordManager = () => {
           setSelectedFolder={setSelectedFolder}
           isSidebarOpen={isSidebarOpen}
           setIsSidebarOpen={setIsSidebarOpen}
+          onImport={handleImport}
+          onExport={handleExport}
         />
 
         {/* Main content - responsivo */}

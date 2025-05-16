@@ -8,6 +8,8 @@ interface SidebarProps {
   setSelectedFolder: (folder: string) => void;
   isSidebarOpen: boolean;
   setIsSidebarOpen: (isOpen: boolean) => void;
+  onImport: () => void;
+  onExport: () => void;
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({
@@ -15,6 +17,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
   setSelectedFolder,
   isSidebarOpen,
   setIsSidebarOpen,
+  onImport,
+  onExport,
 }) => {
   return (
     <>
@@ -38,11 +42,11 @@ export const Sidebar: React.FC<SidebarProps> = ({
         </div>
 
         <div className="absolute bottom-4 left-4 space-y-2 w-[calc(100%-2rem)]">
-          <Button size="sm" variant="outline" className="w-full">
+          <Button size="sm" variant="outline" className="w-full" onClick={onImport}>
             <Import className="h-4 w-4 mr-2" />
             Import
           </Button>
-          <Button size="sm" variant="outline" className="w-full">
+          <Button size="sm" variant="outline" className="w-full" onClick={onExport}>
             <ArrowUpFromLine className="h-4 w-4 mr-2" />
             Export
           </Button>
