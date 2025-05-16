@@ -1,81 +1,110 @@
 
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { Folder, Key, Lock, Edit, Trash, Plus, Import, ArrowUpFromLine, Menu, LogOut } from "lucide-react";
 import { Button } from "./ui/button";
 import { CreatePasswordModal } from "./CreatePasswordModal";
 import { useToast } from "./ui/use-toast";
 import { useNavigate } from "react-router-dom";
-
-interface PasswordEntry {
-  id: string;
-  title: string;
-  login: string;
-  password: string;
-  url: string;
-  modified: string;
-}
-
-interface Folder {
-  id: string;
-  name: string;
-  type: "folder";
-  items: (Folder | PasswordEntry)[];
-}
-
-const STORAGE_KEY = 'password-manager-data';
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { passwordService } from "../services/api";
+import { PasswordEntry } from "../types";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 
 const PasswordManager = () => {
-  const [passwords, setPasswords] = useState<PasswordEntry[]>(() => {
-    const savedPasswords = localStorage.getItem(STORAGE_KEY);
-    return savedPasswords ? JSON.parse(savedPasswords) : [
-      {
-        id: "1",
-        title: "ccloud.com",
-        login: "user@email.com",
-        password: "********",
-        url: "https://app.ccloud.com",
-        modified: "6/13/2019, 9:44:00 AM",
-      },
-    ];
-  });
-
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [selectedFolder, setSelectedFolder] = useState("Example Safe");
   const [editingPassword, setEditingPassword] = useState<PasswordEntry | null>(null);
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const { toast } = useToast();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
 
-  useEffect(() => {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(passwords));
-  }, [passwords]);
+  // Fetch passwords
+  const { data: passwords = [], isLoading, error } = useQuery({
+    queryKey: ['passwords'],
+    queryFn: passwordService.getAll,
+    staleTime: 1000 * 60 * 5, // 5 minutes
+  });
 
-  const handleCreatePassword = (data: { title: string; login: string; password: string; url: string }) => {
-    if (editingPassword) {
-      // Modo edição
-      const updatedPasswords = passwords.map(p => 
-        p.id === editingPassword.id 
-          ? { ...p, ...data, modified: new Date().toLocaleString() }
-          : p
-      );
-      setPasswords(updatedPasswords);
-      setEditingPassword(null);
-      toast({
-        title: "Senha atualizada",
-        description: "A senha foi atualizada com sucesso!",
-      });
-    } else {
-      // Modo criação
-      const newPassword: PasswordEntry = {
-        id: Date.now().toString(),
-        ...data,
-        modified: new Date().toLocaleString(),
-      };
-      setPasswords([...passwords, newPassword]);
+  // Create password mutation
+  const createMutation = useMutation({
+    mutationFn: passwordService.create,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['passwords'] });
       toast({
         title: "Senha adicionada",
         description: "A nova senha foi salva com sucesso!",
       });
+    },
+    onError: (error) => {
+      console.error("Error creating password:", error);
+      toast({
+        title: "Erro ao adicionar senha",
+        description: "Não foi possível salvar a senha.",
+        variant: "destructive",
+      });
+    }
+  });
+
+  // Update password mutation
+  const updateMutation = useMutation({
+    mutationFn: ({ id, data }: { id: string, data: Omit<PasswordEntry, 'id' | 'modified'> }) => 
+      passwordService.update(id, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['passwords'] });
+      toast({
+        title: "Senha atualizada",
+        description: "A senha foi atualizada com sucesso!",
+      });
+    },
+    onError: (error) => {
+      console.error("Error updating password:", error);
+      toast({
+        title: "Erro ao atualizar senha",
+        description: "Não foi possível atualizar a senha.",
+        variant: "destructive",
+      });
+    }
+  });
+
+  // Delete password mutation
+  const deleteMutation = useMutation({
+    mutationFn: passwordService.delete,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['passwords'] });
+      toast({
+        title: "Senha excluída",
+        description: "A senha foi excluída com sucesso!",
+      });
+    },
+    onError: (error) => {
+      console.error("Error deleting password:", error);
+      toast({
+        title: "Erro ao excluir senha",
+        description: "Não foi possível excluir a senha.",
+        variant: "destructive",
+      });
+    }
+  });
+
+  const handleCreatePassword = (data: { title: string; login: string; password: string; url: string }) => {
+    if (editingPassword) {
+      // Modo edição
+      updateMutation.mutate({ 
+        id: editingPassword.id, 
+        data 
+      });
+      setEditingPassword(null);
+    } else {
+      // Modo criação
+      createMutation.mutate(data);
     }
     setIsCreateModalOpen(false);
   };
@@ -86,11 +115,7 @@ const PasswordManager = () => {
   };
 
   const handleDelete = (id: string) => {
-    setPasswords(passwords.filter(p => p.id !== id));
-    toast({
-      title: "Senha excluída",
-      description: "A senha foi excluída com sucesso!",
-    });
+    deleteMutation.mutate(id);
   };
 
   const handleLogout = () => {
@@ -184,70 +209,76 @@ const PasswordManager = () => {
             </Button>
           </div>
 
-          <div className="bg-white rounded-lg shadow overflow-hidden">
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead className="bg-gray-50">
-                  <tr>
-                    <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Title
-                    </th>
-                    <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Login/Password
-                    </th>
-                    <th className="hidden sm:table-cell px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      URL
-                    </th>
-                    <th className="hidden md:table-cell px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Modified
-                    </th>
-                    <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Actions
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-200">
-                  {passwords.map((entry) => (
-                    <tr key={entry.id} className="hover:bg-gray-50">
-                      <td className="px-4 sm:px-6 py-4 whitespace-nowrap">
-                        <div className="flex items-center">
-                          <Key className="h-4 w-4 text-gray-400 mr-2" />
-                          {entry.title}
-                        </div>
-                      </td>
-                      <td className="px-4 sm:px-6 py-4 whitespace-nowrap">
-                        <div>
-                          <div className="truncate max-w-[150px] sm:max-w-none">{entry.login}</div>
-                          <div className="truncate max-w-[150px] sm:max-w-none">{entry.password}</div>
-                        </div>
-                      </td>
-                      <td className="hidden sm:table-cell px-6 py-4 whitespace-nowrap">
-                        <a href={entry.url} className="text-blue-600 hover:text-blue-800 truncate block max-w-[200px]">
-                          {entry.url}
-                        </a>
-                      </td>
-                      <td className="hidden md:table-cell px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        {entry.modified}
-                      </td>
-                      <td className="px-4 sm:px-6 py-4 whitespace-nowrap text-sm font-medium">
-                        <Button variant="ghost" size="sm" className="mr-2" onClick={() => handleEdit(entry)}>
-                          <Edit className="h-4 w-4" />
-                        </Button>
-                        <Button 
-                          variant="ghost" 
-                          size="sm" 
-                          className="text-red-600 hover:text-red-800"
-                          onClick={() => handleDelete(entry.id)}
-                        >
-                          <Trash className="h-4 w-4" />
-                        </Button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+          {isLoading ? (
+            <div className="text-center py-10">Carregando senhas...</div>
+          ) : error ? (
+            <div className="text-center py-10 text-red-500">
+              Erro ao carregar senhas. Verifique a conexão com o servidor.
             </div>
-          </div>
+          ) : (
+            <div className="bg-white rounded-lg shadow overflow-hidden">
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader className="bg-gray-50">
+                    <TableRow>
+                      <TableHead className="w-[200px]">Title</TableHead>
+                      <TableHead className="w-[200px]">Login/Password</TableHead>
+                      <TableHead className="hidden sm:table-cell">URL</TableHead>
+                      <TableHead className="hidden md:table-cell">Modified</TableHead>
+                      <TableHead className="w-[100px]">Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {passwords.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={5} className="text-center py-10">
+                          Nenhuma senha encontrada. Clique em "New Password Safe" para adicionar.
+                        </TableCell>
+                      </TableRow>
+                    ) : (
+                      passwords.map((entry) => (
+                        <TableRow key={entry.id} className="hover:bg-gray-50">
+                          <TableCell>
+                            <div className="flex items-center">
+                              <Key className="h-4 w-4 text-gray-400 mr-2" />
+                              {entry.title}
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <div>
+                              <div className="truncate max-w-[150px] sm:max-w-none">{entry.login}</div>
+                              <div className="truncate max-w-[150px] sm:max-w-none">{entry.password}</div>
+                            </div>
+                          </TableCell>
+                          <TableCell className="hidden sm:table-cell">
+                            <a href={entry.url} className="text-blue-600 hover:text-blue-800 truncate block max-w-[200px]">
+                              {entry.url}
+                            </a>
+                          </TableCell>
+                          <TableCell className="hidden md:table-cell text-sm text-gray-500">
+                            {entry.modified}
+                          </TableCell>
+                          <TableCell>
+                            <Button variant="ghost" size="sm" className="mr-2" onClick={() => handleEdit(entry)}>
+                              <Edit className="h-4 w-4" />
+                            </Button>
+                            <Button 
+                              variant="ghost" 
+                              size="sm" 
+                              className="text-red-600 hover:text-red-800"
+                              onClick={() => handleDelete(entry.id)}
+                            >
+                              <Trash className="h-4 w-4" />
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    )}
+                  </TableBody>
+                </Table>
+              </div>
+            </div>
+          )}
         </div>
       </div>
 
