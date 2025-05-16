@@ -1,8 +1,21 @@
 
-import PasswordManager from "../components/PasswordManager";
+import { useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 
 const Index = () => {
-  return <PasswordManager />;
+  const navigate = useNavigate();
+  
+  useEffect(() => {
+    const isLoggedIn = localStorage.getItem("password-manager-auth");
+    
+    if (isLoggedIn === "true") {
+      navigate("/dashboard");
+    } else {
+      navigate("/");
+    }
+  }, [navigate]);
+
+  return null;
 };
 
 export default Index;

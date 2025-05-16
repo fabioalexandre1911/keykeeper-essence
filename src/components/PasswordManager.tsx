@@ -1,9 +1,10 @@
 
 import React, { useState, useEffect } from "react";
-import { Folder, Key, Lock, Edit, Trash, Plus, Import, ArrowUpFromLine, Menu } from "lucide-react";
+import { Folder, Key, Lock, Edit, Trash, Plus, Import, ArrowUpFromLine, Menu, LogOut } from "lucide-react";
 import { Button } from "./ui/button";
 import { CreatePasswordModal } from "./CreatePasswordModal";
 import { useToast } from "./ui/use-toast";
+import { useNavigate } from "react-router-dom";
 
 interface PasswordEntry {
   id: string;
@@ -43,6 +44,7 @@ const PasswordManager = () => {
   const [editingPassword, setEditingPassword] = useState<PasswordEntry | null>(null);
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const { toast } = useToast();
+  const navigate = useNavigate();
 
   useEffect(() => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(passwords));
@@ -91,6 +93,15 @@ const PasswordManager = () => {
     });
   };
 
+  const handleLogout = () => {
+    localStorage.removeItem("password-manager-auth");
+    toast({
+      title: "Logout realizado",
+      description: "Você foi desconectado com sucesso.",
+    });
+    navigate("/");
+  };
+
   return (
     <div className="min-h-screen bg-white">
       <header className="bg-primary p-4 flex items-center justify-between">
@@ -110,6 +121,9 @@ const PasswordManager = () => {
           </Button>
           <Button variant="ghost" className="text-white">
             <Key className="h-5 w-5" />
+          </Button>
+          <Button variant="ghost" className="text-white" onClick={handleLogout}>
+            <LogOut className="h-5 w-5" />
           </Button>
         </div>
       </header>
